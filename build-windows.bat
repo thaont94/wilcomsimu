@@ -11,7 +11,7 @@ py -3.12 -m venv .build-venv
 if errorlevel 1 goto :failed
 ".build-venv\Scripts\python.exe" -m pip install -r requirements.txt "pyinstaller==6.16.0"
 if errorlevel 1 goto :failed
-".build-venv\Scripts\python.exe" -m PyInstaller --noconfirm --clean --onefile --console --name ThreadStudio --add-data "index.html;." --collect-submodules uvicorn desktop.py
+".build-venv\Scripts\python.exe" -m PyInstaller --noconfirm --clean --onefile --console --name ThreadStudio --add-data "index.html;." --collect-submodules uvicorn --collect-submodules scipy._external desktop.py
 if errorlevel 1 goto :failed
 echo.
 echo Created: %CD%\dist\ThreadStudio.exe
