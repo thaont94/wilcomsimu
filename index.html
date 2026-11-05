@@ -13,7 +13,9 @@
 <div class="layout"><form id="form" class="panel"><b>01 / Thiết lập mẫu</b>
 <label for="image">Ảnh thiết kế</label><input id="image" name="image" type="file" accept="image/png,image/jpeg,image/webp" required><img id="original" alt="Ảnh gốc đã chọn">
 <label for="width">Chiều rộng (mm)</label><input id="width" name="width_mm" type="number" value="100" min="10" max="200" step="1" required>
-<label for="colors">Số màu tối đa</label><input id="colors" name="colors" type="number" value="5" min="2" max="12" required>
+<label for="colors">Số màu tối đa</label><input id="colors" name="colors" type="number" value="5" min="1" max="12" required>
+<label for="recognition">Bộ nhận diện vùng thêu</label><select id="recognition" name="digitizer_mode"><option value="geometry">Quy tắc hình học</option><option value="learned">Mô hình 3 mẫu — thử nghiệm</option></select>
+<p class="settings-note">Mô hình học phân vùng satin/tatami từ XÂY DỰNG, GM247, MSTEK; chưa đạt độ tin cậy cho thiết kế mới. Không học toàn bộ đường kim. Ba mẫu này dùng 1 màu chỉ: chọn 1 màu và nền phù hợp để thử.</p>
 <label for="spacing">Khoảng cách hàng tatami (mm)</label><input id="spacing" name="spacing" type="number" value="0.6" min="0.2" max="2" step="0.01" required>
 <label for="satin-spacing">Khoảng cách hàng satin (mm)</label><input id="satin-spacing" name="satin_spacing" type="number" value="0.36" min="0.2" max="2" step="0.01" required>
 <p class="settings-note">Hai loại mũi có mật độ riêng. Thông số 0,36 mm là giá trị khởi đầu để đối chiếu mẫu MBA; chưa bảo đảm tương đương Wilcom.</p>
@@ -34,7 +36,7 @@ let originalUrl, downloadUrls=[], overrides={}, revision=0;
 function clearDownloads(){document.querySelector('#downloads').replaceChildren();downloadUrls.forEach(URL.revokeObjectURL);downloadUrls=[]}
 function outdated(){revision++;clearDownloads();status.textContent='Thông số đã đổi. Nhấn Tạo đường thêu để cập nhật.'}
 form.addEventListener('input',outdated);
-for(const id of ['image','width','colors','background'])document.getElementById(id).addEventListener('change',()=>{overrides={};document.querySelector('#objects').replaceChildren();document.querySelector('#object-help').textContent=''});
+for(const id of ['image','width','colors','background','recognition'])document.getElementById(id).addEventListener('change',()=>{overrides={};document.querySelector('#objects').replaceChildren();document.querySelector('#object-help').textContent=''});
 document.querySelector('#image').onchange=e=>{if(originalUrl)URL.revokeObjectURL(originalUrl);const file=e.target.files[0];const img=document.querySelector('#original');if(file){originalUrl=URL.createObjectURL(file);img.src=originalUrl;img.style.display='block'}else{img.removeAttribute('src');img.style.display='none'}};
 form.onsubmit=async e=>{e.preventDefault();button.disabled=true;status.textContent='Đang phân tích màu và tạo mũi thêu…';document.querySelector('#downloads').replaceChildren();downloadUrls.forEach(URL.revokeObjectURL);downloadUrls=[];
 try{const sentRevision=revision;const data=new FormData(form);data.set('object_types',JSON.stringify(overrides));const response=await fetch('/api/digitize',{method:'POST',body:data});const result=await response.json();if(sentRevision!==revision){status.textContent='Thông số đã đổi khi đang xử lý. Nhấn tạo lại để cập nhật.';return}if(!response.ok)throw Error(typeof result.detail==='string'?result.detail:'Thông số hoặc ảnh không hợp lệ.');

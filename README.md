@@ -29,7 +29,7 @@ EXE chạy dịch vụ cục bộ trên 127.0.0.1 với cổng trống được 
 
 Có thể chạy launcher mà không đóng gói: `python desktop.py` (sau khi cài requirements).
 
-Chọn PNG/JPEG/WebP dưới 10 MB, điều chỉnh chiều rộng (10–200 mm), số màu (2–12), khoảng cách hàng satin và tatami riêng (0.2–2 mm), rồi tạo mẫu. Chiều cao cũng giới hạn 200 mm. Xem mô phỏng và tải DST/PES. Ảnh logo, vùng màu phẳng là mục tiêu của bản đầu; ảnh chân dung chưa được tối ưu.
+Chọn PNG/JPEG/WebP dưới 10 MB, điều chỉnh chiều rộng (10–200 mm), số màu (1–12), khoảng cách hàng satin và tatami riêng (0.2–2 mm), rồi tạo mẫu. Chiều cao cũng giới hạn 200 mm. Xem mô phỏng và tải DST/PES. Ảnh logo, vùng màu phẳng là mục tiêu của bản đầu; ảnh chân dung chưa được tối ưu.
 
 Nền ảnh có thể chọn Tự động / Đen / Trắng / Chỉ vùng trong suốt / Giữ mọi màu không trong suốt. Logo MBA có dòng chữ trắng cần giữ: dùng nền đen nếu tệp có nền đen, hoặc chỉ bỏ vùng trong suốt nếu PNG có alpha. Tự động ưu tiên alpha khi có vùng trong suốt, nếu không sẽ dùng màu phổ biến nhất ở mép ảnh làm nền; vẫn cần kiểm tra vì mép ảnh không luôn là nền. Nền được loại khỏi cả bảng màu và vùng thêu, nên logo chữ trắng và chữ đỏ trên nền đen chỉ cần hai màu chỉ. Mô phỏng tự chuyển nền tối nếu có chỉ trắng. Lựa chọn nền trắng sẽ bỏ cả chi tiết trắng; chỉ dùng khi đó thực sự là nền cần loại.
 
@@ -42,7 +42,7 @@ Nền ảnh có thể chọn Tự động / Đen / Trắng / Chỉ vùng trong s
 - Sau khi tạo, danh sách vùng cho phép đổi Tự động / Satin / Tatami. Đặt con trỏ vào lựa chọn để làm nổi bật vùng trong mô phỏng; đổi loại rồi nhấn Tạo đường thêu để tính lại và tải tệp mới. Satin bị từ chối cho vùng quá rộng trên 8 mm. Vùng quá nhỏ để dựng cột satin có thể được chuyển sang tatami kèm ghi chú.
 - Thay ảnh, kích thước hoặc số màu sẽ xóa lựa chọn vùng cũ vì cách phân vùng có thể thay đổi. Thay thông số sẽ ẩn tệp tải cũ cho đến khi tính lại.
 
-Đây là nhận diện hình học, không phải mô hình đã được huấn luyện từ DST và không phục hồi đối tượng EMB. Mẫu DST tham khảo chỉ dùng đối chiếu đường đi; không suy ra chắc chắn loại mũi từ định dạng này.
+Chế độ mặc định dùng nhận diện hình học. Chế độ **Mô hình 3 mẫu — thử nghiệm** dùng mô hình phân vùng được fit từ ba cặp ảnh–DST và ghi chú người dùng, với annotation thô cho mảng tatami. Mô hình chưa tổng quát tốt, không bật mặc định, không học toàn bộ đường kim và không phục hồi đối tượng EMB. Xem [quy trình, kết quả và cách thử](training/README.md).
 
 ## Giới hạn
 
@@ -58,4 +58,4 @@ Kiểm tra hướng satin trên nét đứng và nét cong, lỗ trống của t
 
 ## API
 
-`POST /api/digitize` nhận multipart: `image`, `width_mm`, `colors`, `spacing`, `satin_spacing`, `background_mode`, `ignore_white`, `stitch_length`, `angle`, `satin_width`, `object_types`. `spacing` điều khiển khoảng hàng tatami; nếu bỏ qua `satin_spacing`, satin dùng chung `spacing` để tương thích client cũ. `background_mode` nhận `auto`, `black`, `white`, `transparent`, `none`; khi bỏ qua, dùng chế độ `legacy` theo `ignore_white` (mặc định true) để tương thích API cũ. Các chế độ luôn loại pixel trong suốt với alpha dưới 128. Trường `object_types` là chuỗi JSON ánh xạ ID vùng trả về từ lần tạo trước sang `auto`, `satin` hoặc `tatami`. Trả kích thước, số mũi, các lớp màu/đường thêu theo mm, danh sách `objects` có loại mũi, thống kê `object_counts` và dữ liệu DST/PES mã hóa base64. Giới hạn 16 triệu điểm ảnh đầu vào, 100.000 mũi đầu ra và 500 vùng; ảnh quá nhiều thành phần rời ở một màu cũng bị từ chối. Bản thử nghiệm phục vụ phát triển nội bộ, chưa có xác thực hay hàng đợi xử lý cho triển khai công khai.
+`POST /api/digitize` nhận multipart: `image`, `width_mm`, `colors`, `spacing`, `satin_spacing`, `background_mode`, `ignore_white`, `stitch_length`, `angle`, `satin_width`, `object_types`, `digitizer_mode`. `digitizer_mode` nhận `geometry` (mặc định) hoặc `learned` (mô hình phân vùng thử nghiệm). `spacing` điều khiển khoảng hàng tatami; nếu bỏ qua `satin_spacing`, satin dùng chung `spacing` để tương thích client cũ. `background_mode` nhận `auto`, `black`, `white`, `transparent`, `none`; khi bỏ qua, dùng chế độ `legacy` theo `ignore_white` (mặc định true) để tương thích API cũ. Các chế độ luôn loại pixel trong suốt với alpha dưới 128. Trường `object_types` là chuỗi JSON ánh xạ ID vùng trả về từ lần tạo trước sang `auto`, `satin` hoặc `tatami`. Trả kích thước, số mũi, các lớp màu/đường thêu theo mm, danh sách `objects` có loại mũi, thống kê `object_counts` và dữ liệu DST/PES mã hóa base64. Giới hạn 16 triệu điểm ảnh đầu vào, 100.000 mũi đầu ra và 500 vùng; ảnh quá nhiều thành phần rời ở một màu cũng bị từ chối. Bản thử nghiệm phục vụ phát triển nội bộ, chưa có xác thực hay hàng đợi xử lý cho triển khai công khai.

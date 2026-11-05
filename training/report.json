@@ -1,0 +1,149 @@
+{
+  "seed": 42,
+  "sklearn_version": "1.9.1",
+  "model_scope": "local satin/tatami segmentation only",
+  "supervision": "User notes: GM247 and MSTEK all satin; XAY DUNG coarse hand-annotated tatami regions, ambiguous seams excluded. DST used for dimensions and alignment validation, not exact fill labels.",
+  "design_count": 3,
+  "samples": [
+    {
+      "name": "XAY DUNG",
+      "artwork_bbox_xyxy": [
+        23,
+        15,
+        603,
+        588
+      ],
+      "width_mm": 70,
+      "reference_extent_mm": [
+        70.30000000000001,
+        69.6
+      ],
+      "reference_stitches": 6723,
+      "reference_points_within_0.8mm_of_foreground_after_bbox_alignment": 0.9976201100699092,
+      "image_sha256": "932d903e8efdfe4d1665a7b0f04bc874d28acd9d8fd725f1a357eeb0ba501551",
+      "dst_sha256": "1e271c6e7a264e4411319aa0f737262906cbbc60928ac2d9a5047b16422a8177",
+      "label_counts": [
+        21401,
+        15847
+      ]
+    },
+    {
+      "name": "GM247",
+      "artwork_bbox_xyxy": [
+        36,
+        106,
+        618,
+        233
+      ],
+      "width_mm": 80,
+      "reference_extent_mm": [
+        79.0,
+        18.0
+      ],
+      "reference_stitches": 1989,
+      "reference_points_within_0.8mm_of_foreground_after_bbox_alignment": 0.9964806435394671,
+      "image_sha256": "15352fc9620b50d1f31abbdc1a1e3e6c611d2ab4220e0ec1ee0c51f4f5ab3b3e",
+      "dst_sha256": "5e0b9ced4a4259d8766072a58ea35d82b213836ff96fa95c09c9973a8910d1bc",
+      "label_counts": [
+        18364,
+        0
+      ]
+    },
+    {
+      "name": "MSTEK",
+      "artwork_bbox_xyxy": [
+        0,
+        0,
+        827,
+        236
+      ],
+      "width_mm": 70,
+      "reference_extent_mm": [
+        70.4,
+        20.200000000000003
+      ],
+      "reference_stitches": 1775,
+      "reference_points_within_0.8mm_of_foreground_after_bbox_alignment": 1.0,
+      "image_sha256": "f2874674e84fb5e630bcbbad9d75b15e47dd4e82edf3a404510c67d51585ba02",
+      "dst_sha256": "94ecde5b8f902d60465ca19ffadf516d4a27faaf93d2834a9fbcbed09b439ac0",
+      "label_counts": [
+        10685,
+        0
+      ]
+    }
+  ],
+  "sampled_training_pixels": 16000,
+  "resubstitution_macro_f1_not_generalization": 0.972153622101372,
+  "leave_one_design_out": [
+    {
+      "held_out_design": "XAY DUNG",
+      "training_designs": [
+        "GM247",
+        "MSTEK"
+      ],
+      "training_has_both_classes": false,
+      "confusion_matrix_rows_true_columns_predicted_satin_tatami": [
+        [
+          21401,
+          0
+        ],
+        [
+          15847,
+          0
+        ]
+      ],
+      "macro_f1": 0.36489965728315915,
+      "satin_recall": 1.0,
+      "tatami_recall": 0.0
+    },
+    {
+      "held_out_design": "GM247",
+      "training_designs": [
+        "XAY DUNG",
+        "MSTEK"
+      ],
+      "training_has_both_classes": true,
+      "confusion_matrix_rows_true_columns_predicted_satin_tatami": [
+        [
+          4043,
+          14321
+        ],
+        [
+          0,
+          0
+        ]
+      ],
+      "macro_f1": 0.18043468558932477,
+      "satin_recall": 0.22015900675234154,
+      "tatami_recall": null
+    },
+    {
+      "held_out_design": "MSTEK",
+      "training_designs": [
+        "XAY DUNG",
+        "GM247"
+      ],
+      "training_has_both_classes": true,
+      "confusion_matrix_rows_true_columns_predicted_satin_tatami": [
+        [
+          10685,
+          0
+        ],
+        [
+          0,
+          0
+        ]
+      ],
+      "macro_f1": 0.5,
+      "satin_recall": 1.0,
+      "tatami_recall": null
+    }
+  ],
+  "limitations": [
+    "Only one design contains tatami; its held-out fold cannot learn tatami. No independent tatami generalization estimate.",
+    "Pixel counts are correlated; only three independent designs.",
+    "No learning of satin rails, direction, sequencing, underlay or pull compensation.",
+    "No physical sew-out validation. Model is experimental and opt-in."
+  ],
+  "export_max_probability_error": 2.971500279169703e-08
+}

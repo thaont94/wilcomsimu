@@ -1,0 +1,3 @@
+# Training-only tools; not required to run the application or built executable.
+scikit-learn==1.9.1
+libarchive-c==5.3

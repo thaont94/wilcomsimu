@@ -10,6 +10,7 @@ from PIL import Image, ImageOps, UnidentifiedImageError
 import numpy as np
 from pyembroidery import EmbPattern, STITCH, JUMP, COLOR_CHANGE, END, write_dst, write_pes
 from digitizer import RESOLUTION, objects_for_color
+from learned_regions import load_model, split_regions
 
 app = FastAPI(title="Thread Studio")
 Image.MAX_IMAGE_PIXELS = 16_000_000
@@ -31,9 +32,17 @@ async def digitize(image: UploadFile = File(...), width_mm: float = Form(100),
                    ignore_white: bool = Form(True), stitch_length: float = Form(2.5),
                    angle: float = Form(45), satin_width: float = Form(4),
                    object_types: str = Form("{}"), satin_spacing: float | None = Form(None),
-                   background_mode: str = Form("legacy")):
-    if not (10 <= width_mm <= 200 and 2 <= colors <= 12 and 0.2 <= spacing <= 2):
-        raise HTTPException(422, "Kích thước 10–200 mm, số màu 2–12, khoảng hàng 0.2–2 mm.")
+                   background_mode: str = Form("legacy"), digitizer_mode: str = Form("geometry")):
+    if not (10 <= width_mm <= 200 and 1 <= colors <= 12 and 0.2 <= spacing <= 2):
+        raise HTTPException(422, "Kích thước 10–200 mm, số màu 1–12, khoảng hàng 0.2–2 mm.")
+    if digitizer_mode not in ("geometry", "learned"):
+        raise HTTPException(422, "Bộ nhận diện không hợp lệ.")
+    model = None
+    if digitizer_mode == "learned":
+        try:
+            model = load_model()
+        except (OSError, ValueError) as exc:
+            raise HTTPException(503, "Chưa có mô hình phân vùng hợp lệ. Hãy dùng bộ nhận diện hình học.") from exc
     if satin_spacing is not None and not 0.2 <= satin_spacing <= 2:
         raise HTTPException(422, "Khoảng hàng satin phải từ 0.2 đến 2 mm.")
     if background_mode not in ("legacy", "auto", "white", "black", "transparent", "none"):
@@ -108,8 +117,16 @@ async def digitize(image: UploadFile = File(...), width_mm: float = Form(100),
         color = "#" + "".join(f"{v:02x}" for v in rgb)
         paths = []
         try:
-            regions = list(objects_for_color((pixels == label) & foreground, label, spacing, stitch_length,
-                                            angle, satin_width, overrides, satin_spacing=satin_spacing))
+            mask = (pixels == label) & foreground
+            if model is None:
+                regions = list(objects_for_color(mask, label, spacing, stitch_length,
+                                                angle, satin_width, overrides, satin_spacing=satin_spacing))
+            else:
+                regions = []
+                for kind, part in split_regions(mask, RESOLUTION, model):
+                    regions.extend(objects_for_color(part, f"{label}-{kind}", spacing, stitch_length,
+                                                     angle, satin_width, overrides,
+                                                     satin_spacing=satin_spacing, suggested_type=kind))
         except ValueError as exc:
             raise HTTPException(422, str(exc))
         if not regions:
@@ -141,4 +158,5 @@ async def digitize(image: UploadFile = File(...), width_mm: float = Form(100),
         exports[extension] = base64.b64encode(stream.getvalue()).decode("ascii")
     return {"width": width_mm, "height": round(height_mm, 2), "stitches": stitch_count,
             "layers": layers, "objects": objects, "exports": exports,
+            "recognition": {"mode": digitizer_mode, "model": model["metadata"] if model else None},
             "object_counts": {kind: sum(o["type"] == kind for o in objects) for kind in ("satin", "tatami")}}

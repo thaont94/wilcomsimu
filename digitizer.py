@@ -131,7 +131,10 @@ def tatami_paths(mask, spacing_px, stitch_px, angle):
         x, y = x - rw / 2, y - rh / 2
         return [c*x - s*y + w/2, s*x + c*y + h/2]
     paths = []
-    for row_number, y in enumerate(np.arange(.5, rh, spacing_px)):
+    occupied_rows = np.flatnonzero(rotated.any(axis=1))
+    if not len(occupied_rows):
+        return []
+    for row_number, y in enumerate(np.arange(occupied_rows[0]+.5, occupied_rows[-1]+1, spacing_px)):
         indices = np.flatnonzero(rotated[int(y)])
         if not len(indices):
             continue
@@ -151,7 +154,7 @@ def tatami_paths(mask, spacing_px, stitch_px, angle):
 
 
 def objects_for_color(color_mask, label, spacing, stitch_length, angle, satin_width, overrides,
-                      satin_spacing=None):
+                      satin_spacing=None, suggested_type=None):
     labels, count = ndimage.label(color_mask, structure=np.ones((3,3)))
     if count > 500:
         raise ValueError("Ảnh có quá nhiều vùng rời (>500). Hãy dùng logo sạch, ít nhiễu hơn.")
@@ -166,12 +169,17 @@ def objects_for_color(color_mask, label, spacing, stitch_length, angle, satin_wi
         widths = 2 * ndimage.distance_transform_edt(mask)[skeleton] * RESOLUTION
         width = float(np.percentile(widths, 95)) if len(widths) else 0
         suggested = "satin" if width <= satin_width and np.count_nonzero(skeleton) >= 2 else "tatami"
+        if suggested_type is not None:
+            suggested = suggested_type
         object_id = f"{label}-{component}"
         requested = overrides.get(object_id, "auto")
         kind = suggested if requested == "auto" else requested
         notes = []
         if kind == "satin" and width > 8:
-            raise ValueError(f"Vùng {object_id} quá rộng cho satin (>8 mm). Hãy chọn tatami.")
+            if requested != "auto" or suggested_type is None:
+                raise ValueError(f"Vùng {object_id} quá rộng cho satin (>8 mm). Hãy chọn tatami.")
+            kind = "tatami"
+            notes.append("Mô hình đề xuất satin nhưng vùng quá rộng; đã dùng tatami.")
         if kind == "satin":
             paths = satin_paths(mask, skeleton, (spacing if satin_spacing is None else satin_spacing) / RESOLUTION)
             if not paths:
@@ -179,6 +187,9 @@ def objects_for_color(color_mask, label, spacing, stitch_length, angle, satin_wi
                 notes.append("Vùng quá nhỏ để dựng cột satin; đã dùng tatami.")
         if kind == "tatami":
             paths = tatami_paths(mask, spacing / RESOLUTION, stitch_length / RESOLUTION, angle)
+            if not paths and angle != 0:
+                paths = tatami_paths(mask, spacing / RESOLUTION, stitch_length / RESOLUTION, 0)
+                notes.append("Vùng quá nhỏ cho góc tatami đã chọn; dùng góc 0°.")
         if not paths:
             continue
         offset = np.array([bounds[1].start - 2, bounds[0].start - 2])

@@ -1,0 +1,27 @@
+{
+  "annotation_version": "coarse-v1",
+  "samples": [
+    {
+      "name": "XAY DUNG",
+      "image": "XAY DUNG/XAY DUNG/XAY DUNG.PNG",
+      "dst": "XAY DUNG/XAY DUNG/XAY DUNG.DST",
+      "width_mm": 70,
+      "foreground": "blue",
+      "tatami_polygons": [[[424,141],[554,141],[554,432],[310,432],[310,337],[351,375],[425,375],[425,337],[386,298],[386,259],[425,220]]]
+    },
+    {
+      "name": "GM247",
+      "image": "GM247/GM247/GM247.PNG",
+      "dst": "GM247/GM247/GM247 2.DST",
+      "width_mm": 80,
+      "foreground": "white"
+    },
+    {
+      "name": "MSTEK",
+      "image": "MSTEK/MSTEK/MSTEK.png",
+      "dst": "MSTEK/MSTEK/mstek.DST",
+      "width_mm": 70,
+      "foreground": "cyan"
+    }
+  ]
+}
