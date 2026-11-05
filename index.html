@@ -7,11 +7,13 @@
 </style>
 <style>
 .object-row{display:grid;grid-template-columns:20px 1fr 115px;align-items:center;gap:9px;padding:10px 0;border-bottom:1px solid #e5e8df;font-size:12px}.object-row select{padding:7px;font-size:12px}.object-row .swatch{width:16px;height:16px}.object-row:focus-within{background:#edf3e9}#objects{max-height:300px;overflow:auto;margin-top:15px}#objects:empty{display:none}#object-help:empty{display:none}#object-help{font-size:12px}.settings-note{font-size:12px}#preview path{transition:opacity .1s}
+textarea{width:100%;min-height:85px;border:1px solid #cbd4c9;border-radius:7px;padding:10px;font:inherit}#analysis-panel{margin:25px 0 0}#analysis-result{font-size:13px;line-height:1.7;overflow-wrap:anywhere}#analysis-result li{margin-bottom:12px}#analysis-status{font-size:13px}#analyze,#apply-plan{margin-top:12px}#apply-plan{background:#687c53}
 </style>
 <header><b>thread<span style="color:#a88c50;font:inherit"> / </span>studio</b><span>IMAGE TO EMBROIDERY · PROTOTYPE</span></header>
 <main><h1>Từ hình ảnh đến từng mũi chỉ.</h1><p>Không gian thử nghiệm số hóa logo và hình ít màu. Nhập ảnh, điều chỉnh thông số và khám phá mẫu thêu của bạn.</p>
 <div class="layout"><form id="form" class="panel"><b>01 / Thiết lập mẫu</b>
 <label for="image">Ảnh thiết kế</label><input id="image" name="image" type="file" accept="image/png,image/jpeg,image/webp" required><img id="original" alt="Ảnh gốc đã chọn">
+<details id="analysis-panel"><summary>Phân tích thiết kế bằng ChatGPT</summary><p class="settings-note">Khi nhấn phân tích, ảnh và yêu cầu được gửi tới OpenAI qua máy chủ. AI đề xuất phương án; bạn duyệt trước khi áp dụng.</p><label for="design-notes">Yêu cầu thêu</label><textarea id="design-notes" maxlength="2000" placeholder="Ví dụ: chữ và viền dùng satin; mảng lớn dùng tatami."></textarea><button type="button" id="analyze" disabled>Phân tích bằng ChatGPT</button><p id="analysis-status" role="status" aria-live="polite">Đang kiểm tra cấu hình máy chủ…</p><div id="analysis-result"></div><button type="button" id="apply-plan" disabled>Áp dụng thông số gợi ý</button></details>
 <label for="width">Chiều rộng (mm)</label><input id="width" name="width_mm" type="number" value="100" min="10" max="200" step="1" required>
 <label for="colors">Số màu tối đa</label><input id="colors" name="colors" type="number" value="5" min="1" max="12" required>
 <label for="recognition">Bộ nhận diện vùng thêu</label><select id="recognition" name="digitizer_mode"><option value="geometry">Quy tắc hình học</option><option value="learned">Mô hình 3 mẫu — thử nghiệm</option></select>
@@ -47,4 +49,4 @@ document.querySelector('#objects').replaceChildren(...result.objects.map(object=
 document.querySelector('#swatches').replaceChildren(...result.layers.map(layer=>{const swatch=document.createElement('span');swatch.className='swatch';swatch.style.background=layer.color;swatch.title=layer.color;return swatch}));
 for(const [ext,encoded] of Object.entries(result.exports)){const bytes=Uint8Array.from(atob(encoded),c=>c.charCodeAt(0));const url=URL.createObjectURL(new Blob([bytes],{type:'application/octet-stream'}));downloadUrls.push(url);const a=document.createElement('a');a.href=url;a.download='thread-design.'+ext;a.className='download';a.textContent='↓ Tải '+ext.toUpperCase();document.querySelector('#downloads').append(a)}status.textContent='Đã tạo mẫu. Bạn có thể xem trước và tải tệp.';
 }catch(error){status.textContent=error.message}finally{button.disabled=false}};
-</script></html>
+</script><script src="/analysis-ui.js"></script></html>

@@ -1,0 +1,17 @@
+.git
+.env
+.env.*
+__pycache__
+**/__pycache__
+.venv
+.build-venv
+build
+dist
+*.spec
+training
+tests
+*.zip
+*.rar
+*.DST
+*.dst
+*.pes

@@ -1,0 +1,6 @@
+{$THREAD_DOMAIN} {
+    request_body {
+        max_size 12MB
+    }
+    reverse_proxy app:8000
+}

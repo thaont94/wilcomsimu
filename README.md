@@ -13,7 +13,11 @@ UV_CACHE_DIR=/workspace/.cache/uv uv pip sync --python /workspace/.venvs/wilcoms
 /workspace/.venvs/wilcomsimu/bin/uvicorn app:app --host 0.0.0.0 --port 8000
 ```
 
-Giao diện ở `/`, kiểm tra dịch vụ qua `GET /health`. Không cần API key, cơ sở dữ liệu hoặc tài khoản Wilcom. Ảnh được xử lý trong bộ nhớ; ứng dụng không lưu ảnh tải lên.
+Giao diện ở `/`, kiểm tra dịch vụ qua `GET /health`. Tạo đường thêu bằng thuật toán không cần API key, cơ sở dữ liệu hoặc tài khoản Wilcom. Phân tích ảnh bằng ChatGPT là tùy chọn, cần khóa OpenAI API phía máy chủ. Ảnh được xử lý trong bộ nhớ; ứng dụng không lưu ảnh tải lên.
+
+## Web nội bộ và ChatGPT
+
+Đã có Docker, đăng nhập nội bộ và phân tích ảnh bằng OpenAI Responses API. AI gợi ý vùng satin/tatami và thông số để bạn duyệt, sau đó ứng dụng tạo DST/PES bằng bộ tạo hiện có. Xem [hướng dẫn online, cấu hình khóa và HTTPS](ONLINE.md). Cấu hình triển khai chưa tự tạo website; cần máy chủ/tên miền và khóa API riêng.
 
 ## Sử dụng
 
@@ -58,4 +62,6 @@ Kiểm tra hướng satin trên nét đứng và nét cong, lỗ trống của t
 
 ## API
 
-`POST /api/digitize` nhận multipart: `image`, `width_mm`, `colors`, `spacing`, `satin_spacing`, `background_mode`, `ignore_white`, `stitch_length`, `angle`, `satin_width`, `object_types`, `digitizer_mode`. `digitizer_mode` nhận `geometry` (mặc định) hoặc `learned` (mô hình phân vùng thử nghiệm). `spacing` điều khiển khoảng hàng tatami; nếu bỏ qua `satin_spacing`, satin dùng chung `spacing` để tương thích client cũ. `background_mode` nhận `auto`, `black`, `white`, `transparent`, `none`; khi bỏ qua, dùng chế độ `legacy` theo `ignore_white` (mặc định true) để tương thích API cũ. Các chế độ luôn loại pixel trong suốt với alpha dưới 128. Trường `object_types` là chuỗi JSON ánh xạ ID vùng trả về từ lần tạo trước sang `auto`, `satin` hoặc `tatami`. Trả kích thước, số mũi, các lớp màu/đường thêu theo mm, danh sách `objects` có loại mũi, thống kê `object_counts` và dữ liệu DST/PES mã hóa base64. Giới hạn 16 triệu điểm ảnh đầu vào, 100.000 mũi đầu ra và 500 vùng; ảnh quá nhiều thành phần rời ở một màu cũng bị từ chối. Bản thử nghiệm phục vụ phát triển nội bộ, chưa có xác thực hay hàng đợi xử lý cho triển khai công khai.
+`POST /api/digitize` nhận multipart: `image`, `width_mm`, `colors`, `spacing`, `satin_spacing`, `background_mode`, `ignore_white`, `stitch_length`, `angle`, `satin_width`, `object_types`, `digitizer_mode`. `digitizer_mode` nhận `geometry` (mặc định) hoặc `learned` (mô hình phân vùng thử nghiệm). `spacing` điều khiển khoảng hàng tatami; nếu bỏ qua `satin_spacing`, satin dùng chung `spacing` để tương thích client cũ. `background_mode` nhận `auto`, `black`, `white`, `transparent`, `none`; khi bỏ qua, dùng chế độ `legacy` theo `ignore_white` (mặc định true) để tương thích API cũ. Các chế độ luôn loại pixel trong suốt với alpha dưới 128. Trường `object_types` là chuỗi JSON ánh xạ ID vùng trả về từ lần tạo trước sang `auto`, `satin` hoặc `tatami`. Trả kích thước, số mũi, các lớp màu/đường thêu theo mm, danh sách `objects` có loại mũi, thống kê `object_counts` và dữ liệu DST/PES mã hóa base64. Giới hạn 16 triệu điểm ảnh đầu vào, 100.000 mũi đầu ra và 500 vùng; ảnh quá nhiều thành phần rời ở một màu cũng bị từ chối. Có đăng nhập chung khi bật chế độ online; chưa có tài khoản riêng hay hàng đợi xử lý cho dịch vụ công khai. Xem ONLINE.md.
+
+`GET /api/config` chỉ trả trạng thái đã cấu hình AI và tên mô hình, không trả khóa. `POST /api/analyze` nhận multipart `image`, `width_mm`, `notes` (tối đa 2.000 ký tự), gọi OpenAI phía máy chủ và trả kế hoạch để duyệt. Phản hồi chưa tự áp dụng vào thiết kế; các vùng AI chỉ là gợi ý.

@@ -11,14 +11,44 @@ import numpy as np
 from pyembroidery import EmbPattern, STITCH, JUMP, COLOR_CHANGE, END, write_dst, write_pes
 from digitizer import RESOLUTION, objects_for_color
 from learned_regions import load_model, split_regions
+from design_analysis import AnalysisError, AnalysisLimiter, analyze_design, configuration
+from web_access import lifespan, protect_app
 
-app = FastAPI(title="Thread Studio")
+app = FastAPI(title="Thread Studio", lifespan=lifespan)
+app.middleware("http")(protect_app)
+analysis_limiter = AnalysisLimiter()
 Image.MAX_IMAGE_PIXELS = 16_000_000
 
 
 @app.get("/")
 def home():
     return FileResponse(Path(__file__).with_name("index.html"))
+
+
+@app.get("/analysis-ui.js")
+def analysis_script():
+    return FileResponse(Path(__file__).with_name("analysis-ui.js"), media_type="text/javascript")
+
+
+@app.get("/api/config")
+def public_configuration():
+    return {"analysis": configuration()}
+
+
+@app.post("/api/analyze")
+async def analyze(image: UploadFile = File(...), width_mm: float = Form(100, ge=10, le=200),
+                  notes: str = Form("", max_length=2000)):
+    raw = await image.read(10_000_001)
+    if not configuration()["configured"]:
+        raise HTTPException(503, "Máy chủ chưa cấu hình OpenAI. Chức năng tạo đường thêu vẫn có thể sử dụng.")
+    if not analysis_limiter.acquire():
+        raise HTTPException(429, "Đang có phân tích khác hoặc đã đạt 10 lượt/phút. Vui lòng thử lại sau.")
+    try:
+        return await analyze_design(raw, width_mm, notes)
+    except AnalysisError as exc:
+        raise HTTPException(exc.status_code, exc.message) from exc
+    finally:
+        analysis_limiter.release()
 
 
 @app.get("/health")
