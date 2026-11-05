@@ -150,7 +150,8 @@ def tatami_paths(mask, spacing_px, stitch_px, angle):
     return split_and_connect(mask, paths, spacing_px * 1.5)
 
 
-def objects_for_color(color_mask, label, spacing, stitch_length, angle, satin_width, overrides):
+def objects_for_color(color_mask, label, spacing, stitch_length, angle, satin_width, overrides,
+                      satin_spacing=None):
     labels, count = ndimage.label(color_mask, structure=np.ones((3,3)))
     if count > 500:
         raise ValueError("Ảnh có quá nhiều vùng rời (>500). Hãy dùng logo sạch, ít nhiễu hơn.")
@@ -172,7 +173,7 @@ def objects_for_color(color_mask, label, spacing, stitch_length, angle, satin_wi
         if kind == "satin" and width > 8:
             raise ValueError(f"Vùng {object_id} quá rộng cho satin (>8 mm). Hãy chọn tatami.")
         if kind == "satin":
-            paths = satin_paths(mask, skeleton, spacing / RESOLUTION)
+            paths = satin_paths(mask, skeleton, (spacing if satin_spacing is None else satin_spacing) / RESOLUTION)
             if not paths:
                 kind = "tatami"
                 notes.append("Vùng quá nhỏ để dựng cột satin; đã dùng tatami.")

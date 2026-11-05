@@ -30,9 +30,14 @@ async def digitize(image: UploadFile = File(...), width_mm: float = Form(100),
                    colors: int = Form(5), spacing: float = Form(0.6),
                    ignore_white: bool = Form(True), stitch_length: float = Form(2.5),
                    angle: float = Form(45), satin_width: float = Form(4),
-                   object_types: str = Form("{}")):
-    if not (10 <= width_mm <= 200 and 2 <= colors <= 12 and 0.4 <= spacing <= 2):
-        raise HTTPException(422, "Kích thước 10–200 mm, số màu 2–12, khoảng hàng 0.4–2 mm.")
+                   object_types: str = Form("{}"), satin_spacing: float | None = Form(None),
+                   background_mode: str = Form("legacy")):
+    if not (10 <= width_mm <= 200 and 2 <= colors <= 12 and 0.2 <= spacing <= 2):
+        raise HTTPException(422, "Kích thước 10–200 mm, số màu 2–12, khoảng hàng 0.2–2 mm.")
+    if satin_spacing is not None and not 0.2 <= satin_spacing <= 2:
+        raise HTTPException(422, "Khoảng hàng satin phải từ 0.2 đến 2 mm.")
+    if background_mode not in ("legacy", "auto", "white", "black", "transparent", "none"):
+        raise HTTPException(422, "Chế độ nền không hợp lệ.")
     if not (1 <= stitch_length <= 4 and 0 <= angle <= 180 and 1 <= satin_width <= 8):
         raise HTTPException(422, "Mũi tatami 1–4 mm, góc 0–180°, ngưỡng satin 1–8 mm.")
     try:
@@ -64,7 +69,32 @@ async def digitize(image: UploadFile = File(...), width_mm: float = Form(100),
     w = max(2, round(width_mm / RESOLUTION))
     h = max(2, round(height_mm / RESOLUTION))
     # Nearest sampling avoids inventing fringe colors around a flat-color logo.
-    quantized = source.resize((w, h), Image.Resampling.NEAREST).quantize(colors=colors)
+    resized = source.resize((w, h), Image.Resampling.NEAREST)
+    opacity = np.asarray(rgba.getchannel("A").resize((w, h), Image.Resampling.NEAREST))
+    foreground = opacity >= 128
+    rgb_pixels = np.asarray(resized).astype(np.int16)
+    mode = ("white" if ignore_white else "none") if background_mode == "legacy" else background_mode
+    background_rgb = None
+    if mode == "auto":
+        # Transparency is an explicit mask; do not mistake opaque white lettering
+        # for the white canvas used only to composite transparent pixels.
+        if not np.any(opacity < 128):
+            border = np.concatenate((rgb_pixels[0], rgb_pixels[-1], rgb_pixels[:,0], rgb_pixels[:,-1]))
+            border_colors, counts = np.unique(border, axis=0, return_counts=True)
+            background_rgb = border_colors[np.argmax(counts)]
+    elif mode == "white":
+        foreground &= np.min(rgb_pixels, axis=2) < 240
+    elif mode == "black":
+        foreground &= np.max(rgb_pixels, axis=2) > 15
+    if background_rgb is not None:
+        foreground &= np.max(np.abs(rgb_pixels - background_rgb), axis=2) > 16
+    # Exclude the selected background from palette fitting as well as stitching:
+    # a 2-thread black-background logo must retain both white and red as threads.
+    if not foreground.any():
+        raise HTTPException(422, "Không còn vùng thêu. Hãy kiểm tra lựa chọn nền.")
+    ink = np.asarray(resized)[foreground]
+    palette_image = Image.fromarray(ink.reshape((1, len(ink), 3))).quantize(colors=colors)
+    quantized = resized.quantize(palette=palette_image, dither=Image.Dither.NONE)
     pixels = np.asarray(quantized)
     palette = quantized.getpalette()
     pattern = EmbPattern()
@@ -73,13 +103,13 @@ async def digitize(image: UploadFile = File(...), width_mm: float = Form(100),
     objects = []
     for label in sorted(np.unique(pixels).tolist()):
         rgb = palette[label * 3:label * 3 + 3]
-        if ignore_white and min(rgb) >= 240:
+        if not np.any((pixels == label) & foreground):
             continue
         color = "#" + "".join(f"{v:02x}" for v in rgb)
         paths = []
         try:
-            regions = list(objects_for_color(pixels == label, label, spacing, stitch_length,
-                                            angle, satin_width, overrides))
+            regions = list(objects_for_color((pixels == label) & foreground, label, spacing, stitch_length,
+                                            angle, satin_width, overrides, satin_spacing=satin_spacing))
         except ValueError as exc:
             raise HTTPException(422, str(exc))
         if not regions:

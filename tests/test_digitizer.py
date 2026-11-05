@@ -115,10 +115,54 @@ class ApiTests(unittest.TestCase):
     def test_reject_invalid_parameters_and_input(self):
         for fields in [{'object_types':'[]'},{'object_types':'{"0-1":"bad"}'},
                        {'object_types':'{"0-1":[]}'},{'angle':999},{'stitch_length':0},
-                       {'satin_width':20},{'width_mm':float('nan')}]:
+                       {'satin_width':20},{'width_mm':float('nan')},
+                       {'satin_spacing':.19},{'satin_spacing':float('nan')},{'spacing':.19},
+                       {'background_mode':'invalid'}]:
             self.assertEqual(self.convert(**fields).status_code,422,fields)
         response=self.client.post('/api/digitize',files={'image':('bad.png',b'bad')})
         self.assertEqual(response.status_code,400)
+
+    def test_satin_spacing_036_changes_satin_density_without_changing_tatami(self):
+        old=self.convert().json()
+        response=self.convert(satin_spacing=.36)
+        self.assertEqual(response.status_code,200,response.text)
+        new=response.json()
+        by_type=lambda result,kind: next(o for o in result['objects'] if o['type']==kind)
+        self.assertEqual(by_type(old,'tatami')['paths'],by_type(new,'tatami')['paths'])
+        old_satin=by_type(old,'satin')['paths']
+        new_satin=by_type(new,'satin')['paths']
+        self.assertGreater(sum(map(len,new_satin)),sum(map(len,old_satin))*1.5)
+        # For a straight column, two consecutive needle points form half a row.
+        ys=np.asarray(new_satin[0])[:,1]
+        self.assertAlmostEqual(float(np.median(abs(ys[2:]-ys[:-2]))),.36,delta=.02)
+        self.assertEqual(self.convert(spacing=.36).status_code,200)
+
+    def test_white_lettering_and_red_shape_survive_black_background_with_two_threads(self):
+        im=Image.new('RGB',(120,80),'black')
+        draw=ImageDraw.Draw(im)
+        draw.rectangle((10,5,110,10),fill='white')
+        draw.rectangle((20,25,100,70),fill='red')
+        stream=io.BytesIO();im.save(stream,format='PNG')
+        for mode in ('black','auto'):
+            response=self.client.post('/api/digitize',files={'image':('contrast.png',stream.getvalue())},
+                                      data={'width_mm':40,'colors':2,'background_mode':mode,'satin_spacing':.36})
+            self.assertEqual(response.status_code,200,response.text)
+            result=response.json()
+            self.assertEqual({l['color'] for l in result['layers']},{'#ffffff','#ff0000'})
+            pattern=read_pes(io.BytesIO(base64.b64decode(result['exports']['pes'])))
+            self.assertEqual(len(pattern.threadlist),2)
+
+    def test_transparent_background_preserves_opaque_white_foreground(self):
+        im=Image.new('RGBA',(120,80),(0,0,0,0))
+        draw=ImageDraw.Draw(im)
+        draw.rectangle((10,5,110,10),fill='white')
+        draw.rectangle((20,25,100,70),fill='red')
+        stream=io.BytesIO();im.save(stream,format='PNG')
+        for mode in ('transparent','auto'):
+            response=self.client.post('/api/digitize',files={'image':('transparent.png',stream.getvalue())},
+                                      data={'width_mm':40,'colors':2,'background_mode':mode})
+            self.assertEqual(response.status_code,200,response.text)
+            self.assertEqual({l['color'] for l in response.json()['layers']},{'#ffffff','#ff0000'})
 
 
 if __name__ == '__main__':
